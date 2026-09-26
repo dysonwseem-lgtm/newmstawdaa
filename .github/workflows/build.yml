@@ -373,7 +373,7 @@ jobs:
           }
           EOF
 
-          gradle --no-daemon assembleDebug
+          gradle --no-daemon assembleDebug --stacktrace
 
       - name: Verify APK
         shell: bash
