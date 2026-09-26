@@ -3,15 +3,30 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
       - name: Create Android project
+        shell: bash
         run: |
+          set -e
+
           mkdir -p app/src/main/java/com/husam/medicine
           mkdir -p app/src/main/res/values
 
@@ -67,6 +82,16 @@ jobs:
           </resources>
           EOF
 
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:navigationBarColor">#000000</item>
+                  <item name="android:statusBarColor">#111111</item>
+              </style>
+          </resources>
+          EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -97,16 +122,6 @@ jobs:
           </manifest>
           EOF
 
-          cat > app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-                                  <item name="android:fontFamily">sans</item>
-                  <item name="android:navigationBarColor">#000000</item>
-                  <item name="android:statusBarColor">#111111</item>
-              </style>
-          </resources>
-          EOF
-
           cat > app/src/main/java/com/husam/medicine/MainActivity.java <<'EOF'
           package com.husam.medicine;
 
@@ -130,8 +145,11 @@ jobs:
                   if (Build.VERSION.SDK_INT >= 33 &&
                       checkSelfPermission("android.permission.POST_NOTIFICATIONS")
                       != PackageManager.PERMISSION_GRANTED) {
+
                       requestPermissions(
-                          new String[]{"android.permission.POST_NOTIFICATIONS"}, 100);
+                          new String[]{"android.permission.POST_NOTIFICATIONS"},
+                          100
+                      );
                   }
 
                   ReminderReceiver.createChannel(this);
@@ -139,9 +157,11 @@ jobs:
 
                   schedule("لانسوبرازول", "11:00", 1100);
                   schedule("لانسوبرازول", "18:00", 1800);
+                  schedule("يونيبيليت", "18:00", 1801);
               }
 
               void buildScreen() {
+
                   root = new LinearLayout(this);
                   root.setOrientation(LinearLayout.VERTICAL);
                   root.setPadding(35,35,35,35);
@@ -154,231 +174,15 @@ jobs:
                   title.setTextColor(Color.BLACK);
                   title.setGravity(Gravity.CENTER);
 
-                  root.addView(title,
-                      new LinearLayout.LayoutParams(-1,100));
-
-                  addMedicine(
-                      "لانسوبرازول",
-                      "حبة صباحًا قبل الفطور — 11:00");
-
-                  addMedicine(
-                      "لانسوبرازول",
-                      "حبة مساءً قبل الغداء — 18:00");
-
-                  addMedicine(
-                      "يونيبيليت",
-                      "حبة واحدة بعد الغداء");
-
-                  TextView note = new TextView(this);
-                  note.setText(
-                      "اضغط «تم أخذ الدواء» بعد تناول الجرعة.");
-                  note.setTextSize(18);
-                  note.setGravity(Gravity.CENTER);
-
-                  root.addView(note);
-                  setContentView(root);
-              }
-
-              void addMedicine(String name, String details) {
-
-                  LinearLayout card = new LinearLayout(this);
-                  card.setOrientation(LinearLayout.VERTICAL);
-                  card.setPadding(25,20,25,20);
-
-                  TextView n = new TextView(this);
-                  n.setText(name);
-                  n.setTextSize(23);
-
-                  TextView d = new TextView(this);
-                  d.setText(details);
-                  d.setTextSize(17);
-
-                  Button done = new Button(this);
-                  done.setText("✓ تم أخذ الدواء");
-
-                  done.setOnClickListener(v ->
-                      Toast.makeText(
-                          this,
-                          "تم تسجيل أخذ الدواء ✓",
-                          Toast.LENGTH_SHORT
-                      ).show()
-                  );
-
-                  card.addView(n);
-                  card.addView(d);
-                  card.addView(done);
-
                   root.addView(
-                      card,
-                      new LinearLayout.LayoutParams(-1,-2)
-                  );
-              }
-
-              void schedule(String medicine, String time, int id) {
-
-                  try {
-
-                      String[] p = time.split(":");
-
-                      Calendar c = Calendar.getInstance();
-
-                      c.set(
-                          Calendar.HOUR_OF_DAY,
-                          Integer.parseInt(p[0])
-                      );
-
-                      c.set(
-                          Calendar.MINUTE,
-                          Integer.parseInt(p[1])
-                      );
-
-                      c.set(Calendar.SECOND,0);
-                      c.set(Calendar.MILLISECOND,0);
-
-                      if (c.getTimeInMillis()
-                          <= System.currentTimeMillis()) {
-
-                          c.add(
-                              Calendar.DAY_OF_YEAR,
-                              1
-                          );
-                      }
-
-                      Intent i =
-                          new Intent(
-                              this,
-                              ReminderReceiver.class
-                          );
-
-                      i.putExtra("medicine",medicine);
-                      i.putExtra("time",time);
-
-                      PendingIntent pi =
-                          PendingIntent.getBroadcast(
-                              this,
-                              id,
-                              i,
-                              PendingIntent.FLAG_UPDATE_CURRENT |
-                              PendingIntent.FLAG_IMMUTABLE
-                          );
-
-                      AlarmManager am =
-                          (AlarmManager)getSystemService(
-                              ALARM_SERVICE
-                          );
-
-                      am.setRepeating(
-                          AlarmManager.RTC_WAKEUP,
-                          c.getTimeInMillis(),
-                          AlarmManager.INTERVAL_DAY,
-                          pi
-                      );
-
-                  } catch(Exception ignored) {}
-              }
-          }
-          EOF
-
-          cat > app/src/main/java/com/husam/medicine/ReminderReceiver.java <<'EOF'
-          package com.husam.medicine;
-
-          import android.app.*;
-          import android.content.*;
-          import android.os.*;
-
-          public class ReminderReceiver
-              extends BroadcastReceiver {
-
-              static final String CHANNEL =
-                  "medicine_reminders";
-
-              static void createChannel(Context c) {
-
-                  if (Build.VERSION.SDK_INT >= 26) {
-
-                      NotificationChannel ch =
-                          new NotificationChannel(
-                              CHANNEL,
-                              "تذكير الأدوية",
-                              NotificationManager.IMPORTANCE_HIGH
-                          );
-
-                      NotificationManager nm =
-                          c.getSystemService(
-                              NotificationManager.class
-                          );
-
-                      nm.createNotificationChannel(ch);
-                  }
-              }
-
-              @Override
-              public void onReceive(
-                  Context c,
-                  Intent i) {
-
-                  createChannel(c);
-
-                  String medicine =
-                      i.getStringExtra("medicine");
-
-                  String time =
-                      i.getStringExtra("time");
-
-                  Notification.Builder n;
-
-                  if (Build.VERSION.SDK_INT >= 26) {
-                      n = new Notification.Builder(
-                          c,
-                          CHANNEL
-                      );
-                  } else {
-                      n = new Notification.Builder(c);
-                  }
-
-                  n.setSmallIcon(
-                      android.R.drawable.ic_dialog_info
+                      title,
+                      new LinearLayout.LayoutParams(-1,100)
                   );
 
-                  n.setContentTitle(
-                      "💊 حان وقت الدواء"
+                  addMedicine(
+                      "لانسوبرازول",
+                      "حبة صباحًا قبل الفطور — 11:00"
                   );
 
-                  n.setContentText(
-                      medicine +
-                      " — الساعة " +
-                      time
-                  );
-
-                  n.setPriority(
-                      Notification.PRIORITY_HIGH
-                  );
-
-                  n.setAutoCancel(true);
-
-                  NotificationManager nm =
-                      (NotificationManager)
-                      c.getSystemService(
-                          Context.NOTIFICATION_SERVICE
-                      );
-
-                  nm.notify(
-                      (int)(System.currentTimeMillis()
-                          & 0x7fffffff),
-                      n.build()
-                  );
-              }
-          }
-          EOF
-
-          gradle wrapper --gradle-version 8.7
-
-          chmod +x gradlew
-
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: MedicineReminder-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+                  addMedicine(
+                      "لانسوبراز
