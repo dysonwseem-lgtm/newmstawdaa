@@ -177,27 +177,215 @@ jobs:
                   root.addView(
                       title,
                       new LinearLayout.LayoutParams(-1,100)
-                  );
-
-                  addMedicine(
+                                    addMedicine(
                       "لانسوبرازول",
                       "حبة صباحًا قبل الفطور — 11:00"
                   );
 
                   addMedicine(
-                      "لانسوبراز
+                      "لانسوبرازول",
+                      "حبة مساءً قبل الغداء — 18:00"
+                  );
 
-          - name: Find APK
+                  addMedicine(
+                      "يونيبيليت",
+                      "حبة واحدة بعد الغداء — 18:00"
+                  );
+
+                  TextView note = new TextView(this);
+
+                  note.setText(
+                      "اضغط «تم أخذ الدواء» بعد تناول الجرعة."
+                  );
+
+                  note.setTextSize(18);
+                  note.setGravity(Gravity.CENTER);
+
+                  root.addView(note);
+
+                  setContentView(root);
+              }
+
+              void addMedicine(String name, String details) {
+
+                  LinearLayout card = new LinearLayout(this);
+                  card.setOrientation(LinearLayout.VERTICAL);
+                  card.setPadding(25,20,25,20);
+
+                  TextView n = new TextView(this);
+                  n.setText(name);
+                  n.setTextSize(23);
+
+                  TextView d = new TextView(this);
+                  d.setText(details);
+                  d.setTextSize(17);
+
+                  Button done = new Button(this);
+                  done.setText("✓ تم أخذ الدواء");
+
+                  done.setOnClickListener(v ->
+                      Toast.makeText(
+                          this,
+                          "تم تسجيل أخذ الدواء ✓",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                  );
+
+                  card.addView(n);
+                  card.addView(d);
+                  card.addView(done);
+
+                  root.addView(
+                      card,
+                      new LinearLayout.LayoutParams(-1,-2)
+                  );
+              }
+
+              void schedule(String medicine, String time, int id) {
+
+                  try {
+
+                      String[] p = time.split(":");
+                      Calendar c = Calendar.getInstance();
+
+                      c.set(Calendar.HOUR_OF_DAY,
+                          Integer.parseInt(p[0]));
+                      c.set(Calendar.MINUTE,
+                          Integer.parseInt(p[1]));
+                      c.set(Calendar.SECOND,0);
+                      c.set(Calendar.MILLISECOND,0);
+
+                      if (c.getTimeInMillis() <=
+                          System.currentTimeMillis()) {
+                          c.add(Calendar.DAY_OF_YEAR,1);
+                      }
+
+                      Intent i = new Intent(
+                          this,
+                          ReminderReceiver.class
+                      );
+
+                      i.putExtra("medicine",medicine);
+                      i.putExtra("time",time);
+
+                      PendingIntent pi =
+                          PendingIntent.getBroadcast(
+                              this,
+                              id,
+                              i,
+                              PendingIntent.FLAG_UPDATE_CURRENT |
+                              PendingIntent.FLAG_IMMUTABLE
+                          );
+
+                      AlarmManager am =
+                          (AlarmManager)getSystemService(
+                              ALARM_SERVICE
+                          );
+
+                      am.setRepeating(
+                          AlarmManager.RTC_WAKEUP,
+                          c.getTimeInMillis(),
+                          AlarmManager.INTERVAL_DAY,
+                          pi
+                      );
+
+                  } catch(Exception ignored) {}
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/husam/medicine/ReminderReceiver.java <<'EOF'
+          package com.husam.medicine;
+
+          import android.app.*;
+          import android.content.*;
+          import android.os.*;
+
+          public class ReminderReceiver extends BroadcastReceiver {
+
+              static final String CHANNEL = "medicine_reminders";
+
+              static void createChannel(Context c) {
+
+                  if (Build.VERSION.SDK_INT >= 26) {
+
+                      NotificationChannel ch =
+                          new NotificationChannel(
+                              CHANNEL,
+                              "تذكير الأدوية",
+                              NotificationManager.IMPORTANCE_HIGH
+                          );
+
+                      NotificationManager nm =
+                          c.getSystemService(
+                              NotificationManager.class
+                          );
+
+                      nm.createNotificationChannel(ch);
+                  }
+              }
+
+              @Override
+              public void onReceive(Context c, Intent i) {
+
+                  createChannel(c);
+
+                  String medicine =
+                      i.getStringExtra("medicine");
+
+                  String time =
+                      i.getStringExtra("time");
+
+                  Notification.Builder n =
+                      Build.VERSION.SDK_INT >= 26
+                      ? new Notification.Builder(c, CHANNEL)
+                      : new Notification.Builder(c);
+
+                  n.setSmallIcon(
+                      android.R.drawable.ic_dialog_info
+                  );
+
+                  n.setContentTitle(
+                      "💊 حان وقت الدواء"
+                  );
+
+                  n.setContentText(
+                      medicine + " — الساعة " + time
+                  );
+
+                  n.setPriority(
+                      Notification.PRIORITY_HIGH
+                  );
+
+                  n.setAutoCancel(true);
+
+                  NotificationManager nm =
+                      (NotificationManager)
+                      c.getSystemService(
+                          Context.NOTIFICATION_SERVICE
+                      );
+
+                  nm.notify(
+                      (int)(System.currentTimeMillis() & 0x7fffffff),
+                      n.build()
+                  );
+              }
+          }
+          EOF
+
+          gradle --no-daemon assembleDebug
+
+      - name: Verify APK
         shell: bash
         run: |
           echo "Searching for APK..."
           find . -type f -name "*.apk" -print
+          test -f app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MedicineReminder-APK
-          path: "**/*.apk"
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
 
