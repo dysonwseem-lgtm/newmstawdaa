@@ -174,10 +174,12 @@ jobs:
                   title.setTextColor(Color.BLACK);
                   title.setGravity(Gravity.CENTER);
 
-                  root.addView(
+                                    root.addView(
                       title,
                       new LinearLayout.LayoutParams(-1,100)
-                                    addMedicine(
+                  );
+
+                  addMedicine(
                       "لانسوبرازول",
                       "حبة صباحًا قبل الفطور — 11:00"
                   );
