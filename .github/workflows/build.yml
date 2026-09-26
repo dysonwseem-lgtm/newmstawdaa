@@ -29,6 +29,7 @@ jobs:
 
           mkdir -p app/src/main/java/com/husam/medicine
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
 
           cat > settings.gradle <<'EOF'
           pluginManagement {
@@ -70,8 +71,8 @@ jobs:
                   applicationId 'com.husam.medicine'
                   minSdk 23
                   targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
+                  versionCode 2
+                  versionName '2.0'
               }
           }
           EOF
@@ -92,6 +93,31 @@ jobs:
           </resources>
           EOF
 
+          cat > app/src/main/res/drawable/ic_medicine.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+
+              <path
+                  android:fillColor="#1976D2"
+                  android:pathData="M54,8A46,46 0,1 0,54 100A46,46 0,1 0,54 8" />
+
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M35,31A18,18 0,0 1,60.5 31L76,46.5A18,18 0,0 1,76 72A18,18 0,0 1,50.5 72L35,56.5A18,18 0,0 1,35 31" />
+
+              <path
+                  android:fillColor="#1976D2"
+                  android:pathData="M40,39L69,68L62,75L33,46Z" />
+
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M49,48L59,38L66,45L56,55Z" />
+          </vector>
+          EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -100,6 +126,8 @@ jobs:
               <application
                   android:theme="@style/AppTheme"
                   android:label="@string/app_name"
+                  android:icon="@drawable/ic_medicine"
+                  android:roundIcon="@drawable/ic_medicine"
                   android:allowBackup="true"
                   android:supportsRtl="true">
 
@@ -157,7 +185,9 @@ jobs:
 
                   schedule("لانسوبرازول", "11:00", 1100);
                   schedule("لانسوبرازول", "18:00", 1800);
-                  schedule("يونيبيليت", "18:00", 1801);
+                  schedule("يونيبيليت", "20:00", 2000);
+                  schedule("كلوبيد", "21:00", 2100);
+                  schedule("اتور فيكس", "22:00", 2200);
               }
 
               void buildScreen() {
@@ -174,24 +204,34 @@ jobs:
                   title.setTextColor(Color.BLACK);
                   title.setGravity(Gravity.CENTER);
 
-                                    root.addView(
+                  root.addView(
                       title,
                       new LinearLayout.LayoutParams(-1,100)
                   );
 
                   addMedicine(
                       "لانسوبرازول",
-                      "حبة صباحًا قبل الفطور — 11:00"
+                      "11:00 صباحًا — حبة — قبل الفطور"
                   );
 
                   addMedicine(
                       "لانسوبرازول",
-                      "حبة مساءً قبل الغداء — 18:00"
+                      "6:00 مساءً — حبة — قبل الغداء"
                   );
 
                   addMedicine(
                       "يونيبيليت",
-                      "حبة واحدة بعد الغداء — 18:00"
+                      "8:00 مساءً — حبة — بعد الغداء"
+                  );
+
+                  addMedicine(
+                      "كلوبيد",
+                      "9:00 مساءً — حبة — بعد الغداء"
+                  );
+
+                  addMedicine(
+                      "اتور فيكس",
+                      "10:00 مساءً — حبة — بعد الغداء"
                   );
 
                   TextView note = new TextView(this);
@@ -250,16 +290,26 @@ jobs:
                       String[] p = time.split(":");
                       Calendar c = Calendar.getInstance();
 
-                      c.set(Calendar.HOUR_OF_DAY,
-                          Integer.parseInt(p[0]));
-                      c.set(Calendar.MINUTE,
-                          Integer.parseInt(p[1]));
+                      c.set(
+                          Calendar.HOUR_OF_DAY,
+                          Integer.parseInt(p[0])
+                      );
+
+                      c.set(
+                          Calendar.MINUTE,
+                          Integer.parseInt(p[1])
+                      );
+
                       c.set(Calendar.SECOND,0);
                       c.set(Calendar.MILLISECOND,0);
 
                       if (c.getTimeInMillis() <=
                           System.currentTimeMillis()) {
-                          c.add(Calendar.DAY_OF_YEAR,1);
+
+                          c.add(
+                              Calendar.DAY_OF_YEAR,
+                              1
+                          );
                       }
 
                       Intent i = new Intent(
@@ -344,7 +394,7 @@ jobs:
                       : new Notification.Builder(c);
 
                   n.setSmallIcon(
-                      android.R.drawable.ic_dialog_info
+                      R.drawable.ic_medicine
                   );
 
                   n.setContentTitle(
@@ -390,4 +440,3 @@ jobs:
           name: MedicineReminder-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
